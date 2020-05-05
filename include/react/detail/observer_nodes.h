@@ -57,20 +57,20 @@ public:
         this->RegisterMe(NodeCategory::output);
         REACT_EXPAND_PACK(this->AttachToMe(GetInternals(deps).GetNodeId()));
 
-        apply([this] (const auto& ... deps)
+        std::apply([this] (const auto& ... deps)
             { this->func_(GetInternals(deps).Value() ...); }, depHolder_);
     }
 
     ~StateObserverNode()
     {
-        apply([this] (const auto& ... deps)
+        std::apply([this] (const auto& ... deps)
             { REACT_EXPAND_PACK(this->DetachFromMe(GetInternals(deps).GetNodeId())); }, depHolder_);
         this->UnregisterMe();
     }
 
     virtual UpdateResult Update(TurnId turnId) noexcept override
     {
-        apply([this] (const auto& ... deps)
+        std::apply([this] (const auto& ... deps)
             { this->func_(GetInternals(deps).Value() ...); }, depHolder_);
         return UpdateResult::unchanged;
     }
@@ -137,7 +137,7 @@ public:
 
     ~SyncedEventObserverNode()
     {
-        apply([this] (const auto& ... syncs)
+        std::apply([this] (const auto& ... syncs)
             { REACT_EXPAND_PACK(this->DetachFromMe(GetInternals(syncs).GetNodeId())); }, syncHolder_);
         this->DetachFromMe(GetInternals(subject_).GetNodeId());
         this->UnregisterMe();
@@ -149,7 +149,7 @@ public:
         if (GetInternals(this->subject_).Events().empty())
             return UpdateResult::unchanged;
 
-        apply([this] (const auto& ... syncs)
+        std::apply([this] (const auto& ... syncs)
             { func_(GetInternals(this->subject_).Events(), GetInternals(syncs).Value() ...); }, syncHolder_);
 
         return UpdateResult::unchanged;

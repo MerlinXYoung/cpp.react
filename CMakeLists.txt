@@ -7,9 +7,12 @@ set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -Wall -Wpedantic")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17 -Wall -Wpedantic -Wno-#pragma-messages -Wno-unused-variable")
 
 include_directories ("${PROJECT_SOURCE_DIR}/include")
+
+include_directories("${CMAKE_CURRENT_SOURCE_DIR}/3rd/oneTBB/include")
+link_directories("${CMAKE_CURRENT_SOURCE_DIR}/3rd/oneTBB/build/linux_intel64_gcc_cc7.4.0_libc2.27_kernel4.4.0_release")
 
 ### CppReact
 add_library(CppReact 

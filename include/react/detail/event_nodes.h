@@ -19,7 +19,7 @@
 
 //#include "tbb/spin_mutex.h"
 
-#include "node_base.h"
+#include "react/detail/node_base.h"
 #include "react/common/utility.h"
 
 /*****************************************/ REACT_BEGIN /*****************************************/
@@ -110,14 +110,14 @@ public:
 
     ~EventMergeNode()
     {
-        apply([this] (const auto& ... inputs)
+        std::apply([this] (const auto& ... inputs)
             { REACT_EXPAND_PACK(this->DetachFromMe(GetInternals(inputs).GetNodeId())); }, inputs_);
         this->UnregisterMe();
     }
 
     virtual UpdateResult Update(TurnId turnId) noexcept override
     {
-        apply([this] (auto& ... inputs)
+        std::apply([this] (auto& ... inputs)
             { REACT_EXPAND_PACK(MergeFromInput(inputs)); }, inputs_);
 
         if (! this->Events().empty())
@@ -147,7 +147,7 @@ public:
     EventSlotNode(const Group& group) :
         EventSlotNode::EventNode( group )
     {
-        inputNodeId_ = GetGraphPtr()->RegisterNode(&slotInput_, NodeCategory::dyninput);
+        inputNodeId_ = this->GetGraphPtr()->RegisterNode(&slotInput_, NodeCategory::dyninput);
         this->RegisterMe();
 
         this->AttachToMe(inputNodeId_);
@@ -159,7 +159,7 @@ public:
         this->DetachFromMe(inputNodeId_);
 
         this->UnregisterMe();
-        GetGraphPtr()->UnregisterNode(inputNodeId_);
+        this->GetGraphPtr()->UnregisterNode(inputNodeId_);
     }
 
     virtual UpdateResult Update(TurnId turnId) noexcept override
@@ -280,7 +280,7 @@ public:
 
     ~SyncedEventProcessingNode()
     {
-        apply([this] (const auto& ... syncs)
+        std::apply([this] (const auto& ... syncs)
             { REACT_EXPAND_PACK(this->DetachFromMe(GetInternals(syncs).GetNodeId())); }, syncHolder_);
         this->DetachFromMe(GetInternals(dep_).GetNodeId());
         this->UnregisterMe();
@@ -292,7 +292,7 @@ public:
         if (GetInternals(dep_).Events().empty())
             return UpdateResult::unchanged;
 
-        apply([this] (const auto& ... syncs)
+        std::apply([this] (const auto& ... syncs)
             {
                 func_(GetInternals(dep_).Events(), std::back_inserter(this->Events()), GetInternals(syncs).Value() ...);
             },
@@ -329,7 +329,7 @@ public:
 
     ~EventJoinNode()
     {
-        apply([this] (const auto& ... slots)
+        std::apply([this] (const auto& ... slots)
             { REACT_EXPAND_PACK(this->DetachFromMe(GetInternals(slots.source).GetNodeId())); }, slots_);
         this->UnregisterMe();
     }
@@ -337,7 +337,7 @@ public:
     virtual UpdateResult Update(TurnId turnId) noexcept override
     {
         // Move events into buffers.
-        apply([this, turnId] (Slot<Ts>& ... slots)
+        std::apply([this, turnId] (Slot<Ts>& ... slots)
             { REACT_EXPAND_PACK(FetchBuffer(turnId, slots)); }, slots_);
 
         while (true)
@@ -345,7 +345,7 @@ public:
             bool isReady = true;
 
             // All slots ready?
-            apply([this, &isReady] (Slot<Ts>& ... slots)
+            std::apply([this, &isReady] (Slot<Ts>& ... slots)
                 {
                     // Todo: combine return values instead
                     REACT_EXPAND_PACK(CheckSlot(slots, isReady));
@@ -356,7 +356,7 @@ public:
                 break;
 
             // Pop values from buffers and emit tuple.
-            apply([this] (Slot<Ts>& ... slots)
+            std::apply([this] (Slot<Ts>& ... slots)
                 {
                     this->Events().emplace_back(slots.buffer.front() ...);
                     REACT_EXPAND_PACK(slots.buffer.pop_front());
@@ -424,7 +424,7 @@ public:
         srcGraphPtr->DetachNode(outputNodeId_, GetInternals(dep_).GetNodeId());
         srcGraphPtr->UnregisterNode(outputNodeId_);
 
-        auto& linkCache = GetGraphPtr()->GetLinkCache();
+        auto& linkCache = this->GetGraphPtr()->GetLinkCache();
         linkCache.Erase(this);
 
         this->UnregisterMe();
@@ -482,6 +482,7 @@ template <typename E>
 class EventInternals
 {
 public:
+    using NodeType = EventNode<E>;
     EventInternals() = default;
 
     EventInternals(const EventInternals&) = default;

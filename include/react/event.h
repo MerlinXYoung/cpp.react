@@ -21,6 +21,12 @@
 #include "react/detail/event_nodes.h"
 
 #include "react/common/ptrcache.h"
+/***************************************/ REACT_IMPL_BEGIN /**************************************/
+
+template <typename E>
+static Event<E> SameGroupOrLink(const Group& targetGroup, const Event<E>& dep);
+
+/****************************************/ REACT_IMPL_END /***************************************/
 
 /*****************************************/ REACT_BEGIN /*****************************************/
 
@@ -31,25 +37,26 @@ template <typename E>
 class Event : protected REACT_IMPL::EventInternals<E>
 {
 public:
+    using NodeType = typename REACT_IMPL::EventInternals<E>::NodeType;
     // Construct with explicit group
     template <typename F, typename T>
     static Event Create(const Group& group, F&& func, const Event<T>& dep)
-        { return CreateProcessingNode(group, std::forward<F>(func), dep); }
+        { return std::static_pointer_cast<NodeType>(CreateProcessingNode(group, std::forward<F>(func), dep)); }
 
     // Construct with implicit group
     template <typename F, typename T>
     static Event Create(F&& func, const Event<T>& dep)
-        { return CreateProcessingNode(dep.GetGroup(), std::forward<F>(func), dep); }
+        { return std::static_pointer_cast<NodeType>(CreateProcessingNode(dep.GetGroup(), std::forward<F>(func), dep)); }
 
     // Construct with explicit group
     template <typename F, typename T, typename ... Us>
     static Event Create(const Group& group, F&& func, const Event<T>& dep, const State<Us>& ... states)
-        { return CreateSyncedProcessingNode(group, std::forward<F>(func), dep, states ...); }
+        { return std::static_pointer_cast<NodeType>(CreateSyncedProcessingNode(group, std::forward<F>(func), dep, states ...)); }
 
     // Construct with implicit group
     template <typename F, typename T, typename ... Us>
     static Event Create(F&& func, const Event<T>& dep, const State<Us>& ... states)
-        { return CreateSyncedProcessingNode(dep.GetGroup(), std::forward<F>(func), dep, states ...); }
+        { return std::static_pointer_cast<NodeType>(CreateSyncedProcessingNode(dep.GetGroup(), std::forward<F>(func), dep, states ...)); }
 
     Event() = default;
 
@@ -60,10 +67,10 @@ public:
     Event& operator=(Event&&) = default;
 
     auto GetGroup() const -> const Group&
-        { return GetNodePtr()->GetGroup(); }
+        { return this->GetNodePtr()->GetGroup(); }
 
     auto GetGroup() -> Group&
-        { return GetNodePtr()->GetGroup(); }
+        { return this->GetNodePtr()->GetGroup(); }
 
     friend bool operator==(const Event<E>& a, const Event<E>& b)
         { return a.GetNodePtr() == b.GetNodePtr(); }
@@ -103,7 +110,7 @@ protected:
     }
 
     template <typename RET, typename NODE, typename ... ARGS>
-    friend static RET impl::CreateWrappedNode(ARGS&& ... args);
+    friend /*static*/ RET impl::CreateWrappedNode(ARGS&& ... args);
 };
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -113,9 +120,10 @@ template <typename E>
 class EventSource : public Event<E>
 {
 public:
+	using NodeType = REACT_IMPL::EventNode<E>;
     // Construct event source
     static EventSource Create(const Group& group)
-        { return CreateSourceNode(group); }
+        { return std::static_pointer_cast<NodeType>(CreateSourceNode(group)); }
 
     EventSource() = default;
 
@@ -219,7 +227,7 @@ private:
         NodeId nodeId = castedPtr->GetInputNodeId();
         auto& graphPtr = GetInternals(this->GetGroup()).GetGraphPtr();
 
-        graphPtr->PushInput(nodeId, [this, castedPtr, &input] { castedPtr->AddSlotInput(SameGroupOrLink(GetGroup(), input)); });
+        graphPtr->PushInput(nodeId, [this, castedPtr, &input] { castedPtr->AddSlotInput(SameGroupOrLink(this->GetGroup(), input)); });
     }
 
     void RemoveSlotInput(const Event<E>& input)
@@ -232,7 +240,7 @@ private:
         NodeId nodeId = castedPtr->GetInputNodeId();
         auto& graphPtr = GetInternals(this->GetGroup()).GetGraphPtr();
 
-        graphPtr->PushInput(nodeId, [this, castedPtr, &input] { castedPtr->RemoveSlotInput(SameGroupOrLink(GetGroup(), input)); });
+        graphPtr->PushInput(nodeId, [this, castedPtr, &input] { castedPtr->RemoveSlotInput(SameGroupOrLink(this->GetGroup(), input)); });
     }
 
     void RemoveAllSlotInputs()
@@ -256,9 +264,10 @@ template <typename E>
 class EventLink : public Event<E>
 {
 public:
+    using NodeType = typename Event<E>::NodeType;
     // Construct with group
     static EventLink Create(const Group& group, const Event<E>& input)
-        { return GetOrCreateLinkNode(group, input); }
+        { return std::static_pointer_cast<NodeType>(GetOrCreateLinkNode(group, input)); }
 
     EventLink() = default;
 

@@ -119,8 +119,8 @@ private:
         NodeData& operator=(const NodeData&) = default;
 
         NodeData(IReactNode* nodePtrIn, NodeCategory categoryIn) :
-            nodePtr( nodePtrIn ),
-            category(categoryIn)
+            category(categoryIn),nodePtr( nodePtrIn )
+            
         { }
 
         NodeCategory category = NodeCategory::normal;

@@ -69,6 +69,9 @@ namespace example2
     {
         StateVar<string>   name    = StateVar<string>::Create(g, string( "Bob" ));
         StateVar<int>      salary  = StateVar<int>::Create(g, 66666);
+        bool operator==(const Employee& other)const{
+            return name == other.name && salary == other.salary;
+        }
     };
 
     void Run()
@@ -485,6 +488,10 @@ public:
     StateRef<Office> office;
 
     struct Flat;
+
+    bool operator==(const Employee& other)const{
+        return name == other.name && office == other.office;
+    }
 
 private:
 };

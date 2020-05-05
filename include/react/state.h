@@ -29,20 +29,21 @@ template <typename S>
 class State : protected REACT_IMPL::StateInternals<S>
 {
 public:
+    using NodeType = typename REACT_IMPL::StateInternals<S>::NodeType;
     // Construct with explicit group
     template <typename F, typename T1, typename ... Ts>
     static State Create(const Group& group, F&& func, const State<T1>& dep1, const State<Ts>& ... deps)
-        { return CreateFuncNode(group, std::forward<F>(func), dep1, deps ...); }
+        { return std::static_pointer_cast<NodeType>(CreateFuncNode(group, std::forward<F>(func), dep1, deps ...)); }
 
     // Construct with implicit group
     template <typename F, typename T1, typename ... Ts>
     static State Create(F&& func, const State<T1>& dep1, const State<Ts>& ... deps)
-        { return CreateFuncNode(dep1.GetGroup(), std::forward<F>(func), dep1, deps ...); }
+        { return std::static_pointer_cast<NodeType>(CreateFuncNode(dep1.GetGroup(), std::forward<F>(func), dep1, deps ...)); }
 
     // Construct with constant value
     template <typename T>
     static State Create(const Group& group, T&& init)
-        { return CreateFuncNode(group, [value = std::move(init)] { return value; }); }
+        { return std::static_pointer_cast<NodeType>(CreateFuncNode(group, [value = std::move(init)] { return value; })); }
 
     State() = default;
 
@@ -97,14 +98,15 @@ template <typename S>
 class StateVar : public State<S>
 {
 public:
+    using NodeType = typename State<S>::NodeType;
     // Construct with group + default
     static StateVar Create(const Group& group)
-        { return CreateVarNode(group); }
+        { return std::static_pointer_cast<NodeType>(CreateVarNode(group)); }
 
     // Construct with group + value
     template <typename T>
     static StateVar Create(const Group& group, T&& value)
-        { return CreateVarNode(group, std::forward<T>(value)); }
+        { return std::static_pointer_cast<NodeType>(CreateVarNode(group, std::forward<T>(value))); }
 
     StateVar() = default;
 
@@ -188,13 +190,14 @@ template <typename S>
 class StateSlot : public State<S>
 {
 public:
+    using NodeType = typename State<S>::NodeType;
     // Construct with explicit group
     static StateSlot Create(const Group& group, const State<S>& input)
         { return CreateSlotNode(group, input); }
 
     // Construct with implicit group
     static StateSlot Create(const State<S>& input)
-        { return CreateSlotNode(input.GetGroup(), input); }
+        { return std::static_pointer_cast<NodeType>(CreateSlotNode(input.GetGroup(), input)); }
 
     StateSlot() = default;
 
@@ -232,7 +235,7 @@ private:
         NodeId nodeId = castedPtr->GetInputNodeId();
         auto& graphPtr = GetInternals(this->GetGroup()).GetGraphPtr();
 
-        graphPtr->PushInput(nodeId, [this, castedPtr, &newInput] { castedPtr->SetInput(SameGroupOrLink(GetGroup(), newInput)); });
+        graphPtr->PushInput(nodeId, [this, castedPtr, &newInput] { castedPtr->SetInput(SameGroupOrLink(this->GetGroup(), newInput)); });
     }
 };
 
@@ -243,9 +246,10 @@ template <typename S>
 class StateLink : public State<S>
 {
 public:
+    using NodeType = typename State<S>::NodeType;
     // Construct with group
     static StateLink Create(const Group& group, const State<S>& input)
-        { return GetOrCreateLinkNode(group, input); }
+        { return std::static_pointer_cast<NodeType>(GetOrCreateLinkNode(group, input)); }
 
     StateLink() = default;
 
